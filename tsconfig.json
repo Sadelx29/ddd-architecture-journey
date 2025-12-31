@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "target":  "ES2022",
+    "lib": ["ES2022"],
+    
+    "module": "commonjs",
+    "rootDir": "./src",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "baseUrl": "./",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@payment/*": ["src/contexts/payment/*"],
+      "@billing/*": ["src/contexts/billing/*"],
+      "@inventory/*": ["src/contexts/inventory/*"],
+      "@orders/*": ["src/contexts/orders/*"]
+    },
+    
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": true,
+    
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports":  true,
+    
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks":  true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    
+    "noUnusedLocals": true,
+    "noUnusedParameters":  true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*", "src/tests"],
+  "exclude": ["node_modules", "dist", "src/tests"]
+}

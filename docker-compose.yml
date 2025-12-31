@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # PostgreSQL - State-based persistence
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  postgres: 
+    image: postgres:15-alpine
+    container_name: ecommerce-postgres
+    environment:  
+      POSTGRES_USER:  admin
+      POSTGRES_PASSWORD:  admin
+      POSTGRES_DB:  ecommerce
+    ports: 
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:  
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval:  10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Adminer - UI para PostgreSQL
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  adminer:
+    image:  adminer:latest
+    container_name: ecommerce-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - ecommerce-network
+
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # MongoDB - Read Models (CQRS Read Side)
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  mongodb:
+    image: mongo:7
+    container_name: ecommerce-mongodb
+    environment: 
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    ports: 
+      - "27017:27017"
+    volumes: 
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Mongo Express - UI para MongoDB
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  mongo-express: 
+    image: mongo-express:latest
+    container_name: ecommerce-mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
+      ME_CONFIG_MONGODB_URL: mongodb://admin:admin@mongodb:27017/
+      ME_CONFIG_BASICAUTH: false
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - ecommerce-network
+
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # EventStoreDB - Event Sourcing
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  eventstore:
+    image: eventstore/eventstore:23.10.0-bookworm-slim
+    container_name: ecommerce-eventstore
+    environment: 
+      EVENTSTORE_CLUSTER_SIZE:  1
+      EVENTSTORE_RUN_PROJECTIONS: All
+      EVENTSTORE_START_STANDARD_PROJECTIONS: true
+      EVENTSTORE_INSECURE: true
+      EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true
+    ports:
+      - "2113:2113"
+      - "1113:1113"
+    volumes:
+      - eventstore_data:/var/lib/eventstore
+    healthcheck: 
+      test: ["CMD-SHELL", "curl -f http://localhost:2113/health/live || exit 1"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - ecommerce-network
+
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # RabbitMQ - Message Broker (Event Bus)
+  #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ecommerce-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck: 
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:  
+      - ecommerce-network
+
+volumes:
+  postgres_data: 
+    driver: local
+  mongo_data:
+    driver: local
+  eventstore_data: 
+    driver: local
+  rabbitmq_data: 
+    driver:  local
+
+networks:
+  ecommerce-network:
+    driver: bridge
